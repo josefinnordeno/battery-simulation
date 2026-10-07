@@ -1,0 +1,83 @@
+,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,
+,Valbara maskiner,Maskiner,Typ,Arbetstimmar,Arbetsdagar,Medel drifttid/dag,Låg belastning,Hög belastning,klass,Elersättare,Batteri [kWh],Energiförbruktning [kWh/h],Swap-Batteri [kWh],Användbar energi [kWh],Drifttid/batteri [h],Energibehov låg [kWh/dag],Energibehov valt scenario [kWh/dag],Battericykler låg [st/dag],Battericykler hög [st/dag],Batteribyten hög [st/dag],Laddtid [h],Min. batterier/maskin [st],Stillestånd byte [min/dag],Total laddeffekt för ett batteripaket [kW],Totalt antal moduler per maskin [st]
+,TRUE,Volvo L120H ,Lastmaskin,1512,250,"6,0","6,0",8,A,Volvo L120 Electric,282,"40,3",140,98,"2,431761787","243,7344","322,4",3,4,3,"4,841897233",3,75,22,3
+,TRUE,EWR 150E ,Grävmaskin,1261,250,"5,0","5,0",8,A,Volvo EWR150 Electric,270,30,140,98,"3,266666667","151,32",240,2,3,2,"4,841897233",3,50,22,3
+,TRUE,EWR 150E ,Grävmaskin,1218,250,"4,9","4,9",8,A,Volvo EWR150 Electric,270,30,140,98,"3,266666667","146,16",240,2,3,2,"4,841897233",3,50,22,3
+,TRUE,EWR 150E ,Grävmaskin,1211,250,"4,8","4,8",8,A,Volvo EWR150 Electric,270,30,140,98,"3,266666667","145,32",240,2,3,2,"4,841897233",3,50,22,3
+,TRUE,Volvo EWR150E ,Grävmaskin,1098,250,"4,4","4,4",8,A,Volvo EWR150 Electric,270,30,140,98,"3,266666667","131,76",240,2,3,2,"4,841897233",3,50,22,3
+,TRUE,Volvo L90H ,Lastmaskin,1094,250,"4,4","4,4",8,A,Volvo L90 Electric,180,"31,9",140,98,"3,072100313","139,5944","255,2",2,3,2,"4,841897233",3,50,22,3
+,TRUE,Scania XT G450 ,Lastbil,1051,250,"4,2","4,2",8,A,Mercedes-Benz eActros 600,621,----------------------------------------------,140,98,,0,0,0,0,0,"4,841897233",,0,22,0
+,TRUE,Volvo 120 H (nya) ,Lastmaskin,1008,250,"4,0","4,0",8,A,Volvo L120 Electric,282,"40,3",140,98,"2,431761787","162,4896","322,4",2,4,3,"4,841897233",3,75,22,3
+,TRUE,Volvo EC 140 DL ,Grävmaskin,961,250,"3,8","3,8",8,A,Volvo EC230 Electric,450,"61,2",140,98,"1,60130719","235,2528","489,6",3,5,4,"4,841897233",5,100,22,5
+,TRUE,EWR 150E ,Grävmaskin,917,250,"3,7","3,7",8,A,Volvo EWR150 Electric,270,30,140,98,"3,266666667","110,04",240,2,3,2,"4,841897233",3,50,22,3
+,TRUE,Volvo EC 140 DL ,Grävmaskin,419,250,"1,7","1,7",4,B,Volvo EC230 Electric,450,"61,2",140,98,"1,60130719","102,5712","244,8",2,3,2,"4,841897233",3,50,22,3
+,TRUE,Volvo 120 F slam ,Lastmaskin,404,250,"1,6","1,6",4,B,Volvo L120 Electric,282,"40,3",140,98,"2,431761787","65,1248","161,2",1,2,1,"4,841897233",2,25,22,2
+,TRUE,Volvo L120G ,Lastmaskin,400,250,"1,6","1,6",4,B,Volvo L120 Electric,282,"40,3",140,98,"2,431761787","64,48","161,2",1,2,1,"4,841897233",2,25,22,2
+,TRUE,Volvo L120F eddie ,Lastmaskin,267,250,"1,1","1,1",2,C,Volvo L120 Electric,282,"40,3",140,98,"2,431761787","43,0404","80,6",1,1,0,"4,841897233",1,0,22,1
+,TRUE,Volvo EWR150E (service) ,Grävmaskin,148,250,"0,6","0,6",2,C,Volvo EWR150 Electric,270,30,140,98,"3,266666667","17,76",60,1,1,0,"4,841897233",1,0,22,1
+,TRUE,Volvo EC300E ,Grävmaskin,137,250,"0,5","0,5",2,C,Volvo EC230 Electric**,450,"61,2",140,98,"1,60130719","33,5376","122,4",1,2,1,"4,841897233",2,25,22,2
+,TRUE,Komptech Maxx ,Sållverk,84,250,"0,3","0,3",2,C,-,,,140,98,,0,0,0,0,0,"4,841897233",,0,22,0
+,TRUE,Avant 630 ,Trädgårdstraktor,56,250,"0,2","0,2",2,C,-,,,140,98,,0,0,0,0,0,"4,841897233",,0,22,0
+,TRUE,Volvo 120 F flis ,Lastmaskin,43,250,"0,2","0,2",2,C,-,,,140,98,,0,0,0,0,0,"4,841897233",,0,22,0
+,TRUE,New Holland T7 ,Traktor,35,250,"0,1","0,1",2,C,-,,,140,98,,0,0,0,0,0,"4,841897233",,0,22,0
+,,,,,,,,,,,,,,,,,,,,,,,,,
+,Column 4,Parametrar,Värde ,Enhet,,Parameter,Värde,Enhet,,Scenariofaktor,storlek,,,,,,Högbelastning,,,,,,,,
+1 batteri per,,Batteri storlek,140,kWh,,Totalt antal maskiner i modellen,15,St,,Scenariofaktor 2025,1,,,,,,,,,,,,,,
+fordon,,Klass A - antal moduler,1,,,Maskinvis dimensionerat batteribehov,40,St,,Scenariofaktor 2030,"1,2",,,,,,,,,,,,,,
+1 modul = 1,,Klass B - antal moduler,1,,,Totalt antal batterimoduler,40,St,,Scenariofaktor 2035,"1,5",,,,,,,,,,,,,,
+ batteri,,Klass C - antal moduler,1,,,Batterimodulstorlek,140,kWh,,,,,,,,,,,,,,,,,
+,,SOC max,"0,8",,,Total installerad batterikapacitet,5600,kWh,,,,,,,,,,,,,,,,,
+,,SOC min,"0,1",,,,,,,,,,,,,,,,,,,,,,
+,,Laddningseffekt per batteri [kW],22,kW,,Laddningseffekt per modul,22,kW,,OBS!,,,,,,,,,,,,,,,
+,,Laddningsverkningsgrad,"0,92",,,Max teoretisk laddeffekt,880,kW,,Får endast ändra värden på blåmarkerade,,,,,,,,,,,,,,,
+,,Batteribytestid,25,min,,Befintlig anläggningslast,250,kW,,,,,,,,,,,,,,,,,
+,,Nätanslutning,1000,kW,,Nätanslutning,1000,kW,,,,,,,,,,,,,,,,,
+,,Befintlig anläggningslast (maxlast vinterdag),250,kW,,Teoretisk max nätlast,1130,kW,,,,,,,,,,,,,,,,,
+,,Aktiv scenariofaktor,1,,,Marginal till nätgräns,−130,kW,,,,,,,,,,,,,,,,,
+,,Laddtid per batteri,"4,841897233",,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,
+,Column 11,Tid,Batteribyten [st],Färdigladdade batterier [st],Moduler till laddning [st],Moduler som laddar [st],Laddeffekt [kW],Befintlig last [kW],Total nätlast [kW],Marginal till nätgräns [kW],Kolumn 1,,Parameter,Värde,Enhet,,Tid,Batterier i maskiner,Batterier som laddar,Fulladdade reservbatterier,Totalt upptagna batterier,Kontrollsumma [st],,,
+,,08.00.00,0,0,0,0,0,250,250,750,,,Total antal batteribyen/dag,27,st/dag,,08.00.00,15,0,25,15,40,,,
+,,08.30.00,0,0,0,0,0,250,250,750,,,Max antal batterier som laddar samtidigt,22,st,,08.30.00,15,0,25,15,40,,,
+,,09.00.00,0,0,0,0,0,250,250,750,,,Max laddeffekt,484,kW,,09.00.00,15,0,25,15,40,,,
+,,09.30.00,3,0,3,3,66,250,316,684,,,Max total nätlast,734,kW,,09.30.00,15,3,22,18,40,,,
+,,10.00.00,4,0,4,7,154,250,404,596,,,Minsta nätmarginal,266,kW,,10.00.00,15,7,18,22,40,,,
+,,10.30.00,0,0,0,7,154,250,404,596,,,Minsta reservlager,3,st batterier,,10.30.00,15,7,18,22,40,,,
+,,11.00.00,8,0,8,15,330,250,580,420,,,Total laddenergi 08:00-16:00,2134,kWh,,11.00.00,15,15,10,30,40,,,
+,,11.30.00,0,0,0,15,330,250,580,420,,,Nätgräns överskrids?,NEJ,JA/NEJ,,11.30.00,15,15,10,30,40,,,
+,,12.00.00,0,0,0,15,330,250,580,420,,,batteribrist med vald pool,NEJ,JA/NEJ,,12.00.00,15,15,10,30,40,,,
+,,12.30.00,3,0,3,18,396,250,646,354,,,beräknat minsta batteribehov,37,st,,12.30.00,15,18,7,33,40,,,
+,,13.00.00,0,0,0,18,396,250,646,354,,,,,,,13.00.00,15,18,7,33,40,,,
+,,13.30.00,0,0,0,18,396,250,646,354,,,,,,,13.30.00,15,18,7,33,40,,,
+,,14.00.00,2,3,2,17,374,250,624,376,,,,,,,14.00.00,15,17,8,32,40,,,
+,,14.30.00,5,0,5,22,484,250,734,266,,,,,,,14.30.00,15,22,3,37,40,,,
+,,15.00.00,2,4,2,20,440,250,690,310,,,,,,,15.00.00,15,20,5,35,40,,,
+,,15.30.00,0,1,0,19,418,250,668,332,,,,,,,15.30.00,15,19,6,34,40,,,
+,,16.00.00,0,7,0,12,264,250,514,486,,,,,,,16.00.00,15,12,13,27,40,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,
+,Column 10,Maskin,Drifttid/batteri [h],Antal byten hög,Byte 1,Byte 2,Byte 3,Byte 4,Byte 5,Byte 6,,Maskin,Färdig 1,Färdig 2,Färdig 3,Färdig 4,Färdig 5,Färdig 6,,,,,,,
+,,Volvo L120H ,"2,431761787",3,10.25.54,12.51.49,15.17.43,,,,,Volvo L120H ,15.16.25,17.42.20,20.08.14,,,,,,,,,,
+,,EWR 150E ,"3,266666667",2,11.16.00,14.32.00,,,,,,EWR 150E ,16.06.31,19.22.31,,,,,,,,,,,
+,,EWR 150E ,"3,266666667",2,11.16.00,14.32.00,,,,,,EWR 150E ,16.06.31,19.22.31,,,,,,,,,,,
+,,EWR 150E ,"3,266666667",2,11.16.00,14.32.00,,,,,,EWR 150E ,16.06.31,19.22.31,,,,,,,,,,,
+,,Volvo EWR150E ,"3,266666667",2,11.16.00,14.32.00,,,,,,Volvo EWR150E ,16.06.31,19.22.31,,,,,,,,,,,
+,,Volvo L90H ,"3,072100313",2,11.04.20,14.08.39,,,,,,Volvo L90H ,15.54.50,18.59.10,,,,,,,,,,,
+,,Scania XT G450 ,,0,,,,,,,,Scania XT G450 ,,,,,,,,,,,,,
+,,Volvo 120 H (nya) ,"2,431761787",3,10.25.54,12.51.49,15.17.43,,,,,Volvo 120 H (nya) ,15.16.25,17.42.20,20.08.14,,,,,,,,,,
+,,Volvo EC 140 DL ,"1,60130719",4,09.36.05,11.12.09,12.48.14,14.24.19,,,,Volvo EC 140 DL ,14.26.36,16.02.40,17.38.45,19.14.50,,,,,,,,,
+,,EWR 150E ,"3,266666667",2,11.16.00,14.32.00,,,,,,EWR 150E ,16.06.31,19.22.31,,,,,,,,,,,
+,,Volvo EC 140 DL ,"1,60130719",2,09.36.05,11.12.09,,,,,,Volvo EC 140 DL ,14.26.36,16.02.40,,,,,,,,,,,
+,,Volvo 120 F slam ,"2,431761787",1,10.25.54,,,,,,,Volvo 120 F slam ,15.16.25,,,,,,,,,,,,
+,,Volvo L120G ,"2,431761787",1,10.25.54,,,,,,,Volvo L120G ,15.16.25,,,,,,,,,,,,
+,,Volvo L120F eddie ,"2,431761787",0,,,,,,,,Volvo L120F eddie ,,,,,,,,,,,,,
+,,Volvo EWR150E (service) ,"3,266666667",0,,,,,,,,Volvo EWR150E (service) ,,,,,,,,,,,,,
+,,Volvo EC300E ,"1,60130719",1,09.36.05,,,,,,,Volvo EC300E ,14.26.36,,,,,,,,,,,,
+,,Komptech Maxx ,,0,,,,,,,,Komptech Maxx ,,,,,,,,,,,,,
+,,Avant 630 ,,0,,,,,,,,Avant 630 ,,,,,,,,,,,,,
+,,Volvo 120 F flis ,,0,,,,,,,,Volvo 120 F flis ,,,,,,,,,,,,,
+,,New Holland T7 ,,0,,,,,,,,New Holland T7 ,,,,,,,,,,,,,
