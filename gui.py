@@ -3,6 +3,7 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import messagebox, ttk
 
+from reference import run_reference_validation
 from simulation import run_simulation
 from visualization import render_result
 
@@ -23,19 +24,44 @@ class SimulationApp(tk.Tk):
         output.pack(side="right", fill="both", expand=True)
         self.output = output
 
-        ttk.Label(controls, text="BATTERY SIMULATION", font=("Segoe UI", 16, "bold")).pack(anchor="w", pady=(0, 22))
+        ttk.Label(controls, text="BATTERY SIMULATION", font=("Segoe UI", 16, "bold")).pack(
+            anchor="w", pady=(0, 22)
+        )
         self.capacity = self._field(controls, "Batterikapacitet (kWh)", "140")
         self.power = self._field(controls, "Laddningseffekt per batteri (kW)", "22")
-        self.swap_time = self._field(controls, "Bytestid (minuter)", "15")
+        self.swap_time = self._field(controls, "Bytestid (minuter)", "25")
+        self.reserve = self._field(controls, "Reservbatterier (utöver maskiner)", "25")
+        self.chargers = self._field(controls, "Antal laddare", "22")
+        self.grid = self._field(controls, "Nätgräns (kW)", "1000")
+        ttk.Label(controls, text="Laddstrategi").pack(anchor="w", pady=(8, 4))
+        self.policy = tk.StringVar(value="immediate")
+        ttk.Combobox(
+            controls,
+            textvariable=self.policy,
+            values=("immediate", "deadline"),
+            state="readonly",
+            width=20,
+        ).pack(anchor="w")
         ttk.Label(controls, text="Belastningsscenario").pack(anchor="w", pady=(18, 5))
         self.scenario = tk.StringVar(value="high")
-        ttk.Radiobutton(controls, text="Hög belastning / vinter", variable=self.scenario, value="high").pack(anchor="w")
-        ttk.Radiobutton(controls, text="Låg belastning / sommar", variable=self.scenario, value="low").pack(anchor="w")
+        ttk.Radiobutton(
+            controls, text="Hög belastning / vinter", variable=self.scenario, value="high"
+        ).pack(anchor="w")
+        ttk.Radiobutton(
+            controls, text="Låg belastning / sommar", variable=self.scenario, value="low"
+        ).pack(anchor="w")
         ttk.Button(controls, text="Kör simulering", command=self._run).pack(fill="x", pady=(28, 0))
+        ttk.Button(controls, text="Kontrollera kalkylbladsreferens", command=self._reference).pack(
+            fill="x", pady=(8, 0)
+        )
         self.status = ttk.Label(controls, text="Redo", wraplength=190)
         self.status.pack(anchor="w", pady=16)
-        ttk.Label(output, text="Resultat", font=("Segoe UI", 14, "bold")).pack(anchor="w", pady=(0, 8))
-        ttk.Label(output, text="Kör simuleringen för att visa schema, SoC och effektuttag.").pack(anchor="w", pady=(0, 8))
+        ttk.Label(output, text="Resultat", font=("Segoe UI", 14, "bold")).pack(
+            anchor="w", pady=(0, 8)
+        )
+        ttk.Label(output, text="Kör simuleringen för att visa schema, SoC och effektuttag.").pack(
+            anchor="w", pady=(0, 8)
+        )
 
     @staticmethod
     def _field(parent, label, default):
@@ -46,13 +72,35 @@ class SimulationApp(tk.Tk):
 
     def _run(self):
         try:
-            result = run_simulation(float(self.capacity.get()), float(self.power.get()), int(self.swap_time.get()), self.scenario.get())
+            result = run_simulation(
+                float(self.capacity.get()),
+                float(self.power.get()),
+                int(self.swap_time.get()),
+                self.scenario.get(),
+                reserve_count=int(self.reserve.get()),
+                charger_count=int(self.chargers.get()),
+                grid_limit_kw=float(self.grid.get()),
+                charging_policy=self.policy.get(),
+            )
         except (TypeError, ValueError) as error:
             messagebox.showerror("Ogiltiga parametrar", str(error))
             return
         render_result(self.output, result)
-        peak = max(result.total_kw)
-        self.status.configure(text=f"Klar. Topp: {peak:.0f} kW | Byten: {len(result.swaps)}")
+        self.status.configure(
+            text=f"Klar. Topp: {result.peak_total_kw:.0f} kW | Byten: {len(result.swaps)}\nStillestånd i schema: {result.downtime_minutes:.0f} maskinmin\nTotal bytestid: {result.swap_downtime_minutes:.0f} maskinmin\nReservbrist: {result.reserve_shortage_minutes:.0f} maskinmin"
+        )
+
+    def _reference(self):
+        try:
+            result = run_reference_validation()
+        except (OSError, ValueError) as error:
+            messagebox.showerror("Referenskontroll", str(error))
+            return
+        kpis = result.kpis
+        messagebox.showinfo(
+            "Kalkylbladsreferens (återspelning)",
+            f"Byten: {kpis['swaps']}\nMax laddande: {kpis['max_simultaneous_charging']}\nLaddeffekt: {kpis['peak_charging_kw']:.0f} kW\nNätlast: {kpis['peak_total_kw']:.0f} kW\nMinsta reserv: {kpis['minimum_reserve']}\n\nTidsavvikelser mellan kalkylbladets tabeller: {len(result.discrepancies)}.\nDetta är källdata, inte den fysiska simuleringen.",
+        )
 
 
 def main():
