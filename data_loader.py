@@ -81,6 +81,7 @@ def _load_model_rows(frame: pd.DataFrame) -> list[dict]:
             {
                 "name": str(row["Maskiner"]).strip(),
                 "type": str(row["Typ"]).strip(),
+                "machine_class": str(row.get("klass", "A")).strip().upper(),
                 "annual_hours": annual_hours,
                 "average_power_kw": consumption,
                 "battery_capacity_kwh": battery_capacity,
@@ -100,24 +101,30 @@ def _estimate_power(machine_type: str) -> float:
     return 90.0
 
 
-def create_schedule(annual_hours: float, scenario: str, rng: np.random.Generator) -> list[bool]:
-    daily_hours = min(8.0 if scenario == "high" else 6.0, annual_hours / 250.0)
+def create_schedule(
+    annual_hours: float,
+    scenario: str,
+    rng: np.random.Generator | None = None,
+    machine_class: str = "A",
+) -> list[bool]:
+    """Create the fixed reference workday for machine classes A, B and C."""
+    reference_hours = {
+        "A": {"high": 8.0, "low": 6.0},
+        "B": {"high": 4.0, "low": 4.0},
+        "C": {"high": 2.0, "low": 2.0},
+    }
+    daily_hours = reference_hours.get(machine_class, reference_hours["A"]).get(scenario, 0.0)
     active_steps = round(daily_hours / 0.25)
     schedule = np.zeros(96, dtype=bool)
-    start = 32 if scenario == "high" else 36
-    latest_start = max(start, 72 - active_steps)
-    chosen_start = int(rng.integers(start, latest_start + 1))
-    schedule[chosen_start : chosen_start + active_steps] = True
+    start = 32
+    schedule[start : start + active_steps] = True
     return schedule.tolist()
 
 
 def background_load(scenario: str) -> np.ndarray:
     time = np.arange(96) / 4.0
     if scenario == "high":
-        base, peak, center = 145.0, 105.0, 13.0
-        morning = 24.0 * np.exp(-0.5 * ((time - 8.0) / 1.8) ** 2)
-        afternoon = peak * np.exp(-0.5 * ((time - center) / 4.0) ** 2)
-        return base + morning + afternoon
+        return np.full(96, 250.0)
     base, peak, center = 48.0, 48.0, 13.0
     morning = 10.0 * np.exp(-0.5 * ((time - 8.0) / 2.0) ** 2)
     afternoon = peak * np.exp(-0.5 * ((time - center) / 4.5) ** 2)

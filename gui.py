@@ -26,7 +26,7 @@ class SimulationApp(tk.Tk):
         ttk.Label(controls, text="BATTERY SIMULATION", font=("Segoe UI", 16, "bold")).pack(anchor="w", pady=(0, 22))
         self.capacity = self._field(controls, "Batterikapacitet (kWh)", "140")
         self.power = self._field(controls, "Laddningseffekt per batteri (kW)", "22")
-        self.swap_time = self._field(controls, "Bytestid (minuter)", "15")
+        self.swap_time = self._field(controls, "Bytestid (minuter)", "25")
         ttk.Label(controls, text="Belastningsscenario").pack(anchor="w", pady=(18, 5))
         self.scenario = tk.StringVar(value="high")
         ttk.Radiobutton(controls, text="Hög belastning / vinter", variable=self.scenario, value="high").pack(anchor="w")

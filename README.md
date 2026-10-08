@@ -13,11 +13,12 @@ The app reads `Beräkningar - Modell.csv` first. It uses rows marked `TRUE`, ign
 
 The simulation covers 24 hours in 96 steps and models:
 
-- variable machine demand using a seeded normal distribution;
-- CC/CV charging, with tapering above 80% SoC;
-- battery swaps at low SoC and during break windows;
-- background load for winter/high and summer/low scenarios;
-- 22 kW charging per battery, aggregated across simultaneously charging batteries.
+- explicit Class A/B/C reference work hours for high and low load scenarios;
+- a 10% to 80% battery operating window;
+- 92% charging efficiency, with grid energy separated from stored energy;
+- 25-minute swaps that remove the machine from productive work;
+- a finite reserve and charging pool, with 22 kW per occupied charger;
+- deterministic baseline behavior controlled by the `seed` argument.
 
 ## Build an executable
 
