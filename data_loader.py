@@ -22,6 +22,7 @@ class DailySchedule:
     start_step: int
     end_step: int
     required_productive_steps: int
+    machine_id: str | None = None
 
     @property
     def start_label(self) -> str:
@@ -56,13 +57,14 @@ def load_machine_rows(csv_path: str | Path | None = None) -> list[dict]:
     if not path.exists():
         return [
             {
+            "machine_id": f"machine-{index + 1}",
                 "name": name,
                 "type": kind,
                 "annual_hours": hours,
                 "average_power_kw": power,
                 "battery_capacity_kwh": 140.0,
             }
-            for name, kind, hours, power in DEFAULT_MACHINES
+            for index, (name, kind, hours, power) in enumerate(DEFAULT_MACHINES)
         ]
 
     read_options = {"skiprows": 3} if path.name == "Beräkningar - Modell.csv" else {}
@@ -76,13 +78,14 @@ def load_machine_rows(csv_path: str | Path | None = None) -> list[dict]:
         raise ValueError(f"CSV saknar kolumner: {', '.join(sorted(required - set(frame.columns)))}")
 
     rows = []
-    for _, row in frame.iterrows():
+    for index, (_, row) in enumerate(frame.iterrows()):
         annual_hours = _number(row["Drift/år (h)"])
         if annual_hours <= 0:
             continue
         rows.append(
             {
                 "name": str(row["Maskin"]),
+                "machine_id": f"machine-{index + 1}",
                 "type": str(row["Typ"]),
                 "annual_hours": annual_hours,
                 "average_power_kw": _estimate_power(str(row["Typ"])),
@@ -95,7 +98,7 @@ def load_machine_rows(csv_path: str | Path | None = None) -> list[dict]:
 def _load_model_rows(frame: pd.DataFrame) -> list[dict]:
     """Read the machine table in Beräkningar - Modell.csv."""
     rows = []
-    for _, row in frame.iterrows():
+    for index, (_, row) in enumerate(frame.iterrows()):
         selected = str(row.get("Valbara maskiner", "")).strip().lower() in {"true", "1", "ja"}
         replacement = str(row.get("Elersättare", "")).strip()
         annual_hours = _number(row.get("Arbetstimmar"))
@@ -106,6 +109,7 @@ def _load_model_rows(frame: pd.DataFrame) -> list[dict]:
         rows.append(
             {
                 "name": str(row["Maskiner"]).strip(),
+                "machine_id": f"machine-{index + 1}",
                 "type": str(row["Typ"]).strip(),
                 "machine_class": str(row.get("klass", "A")).strip().upper(),
                 "annual_hours": annual_hours,
@@ -133,8 +137,25 @@ def create_schedule(
     rng: np.random.Generator | None = None,
     machine_class: str = "A",
 ) -> list[bool]:
-    """Return the productive mask for the reference workday."""
-    return create_daily_schedule(annual_hours, scenario, machine_class).productive
+    """Return the unchanged fixed-block reference mask.
+
+    This compatibility function intentionally does not use the new operating
+    schedule policies. The reference model starts at 08:00 and is retained so
+    its outputs can be compared with the explicit daily schedules.
+    """
+    return create_reference_schedule(annual_hours, scenario, machine_class)
+
+
+def create_reference_schedule(
+    annual_hours: float,
+    scenario: str,
+    machine_class: str = "A",
+) -> list[bool]:
+    """Create the original reference workday: one fixed block from 08:00."""
+    required_steps = _required_productive_steps(annual_hours, scenario, machine_class)
+    schedule = np.zeros(96, dtype=bool)
+    schedule[32 : 32 + required_steps] = True
+    return schedule.tolist()
 
 
 def create_daily_schedule(
@@ -142,6 +163,7 @@ def create_daily_schedule(
     scenario: str,
     machine_class: str = "A",
     policy: str = "centered",
+    machine_id: str | None = None,
 ) -> DailySchedule:
     """Create a deterministic shift within 07:00-16:00.
 
@@ -150,45 +172,116 @@ def create_daily_schedule(
     are excluded from productive slots. This avoids starting every short
     shift at 07:00 while remaining reproducible and configurable by policy.
     """
+    required_steps = _required_productive_steps(annual_hours, scenario, machine_class)
+    if policy == "reference":
+        reference = create_reference_schedule(annual_hours, scenario, machine_class)
+        end_step = 32 + required_steps
+        return DailySchedule(reference, reference.copy(), 32, end_step, required_steps, machine_id)
+    if policy not in {"centered", "staggered"}:
+        raise ValueError(f"Unknown scheduling policy: {policy}")
+    if required_steps == 0:
+        empty = [False] * 96
+        return DailySchedule(empty, empty.copy(), DAY_START_STEP, DAY_START_STEP, 0, machine_id)
+
+    candidates = _schedule_candidates(required_steps)
+    if not candidates:
+        raise ValueError(f"{required_steps / STEPS_PER_HOUR} productive hours do not fit in the operating window")
+
+    if policy == "centered":
+        candidate = min(candidates, key=lambda item: (abs(item[0] - 46), item[1]))
+    else:
+        rank = _stable_identifier_rank(machine_id or "machine-1")
+        ordered = sorted(candidates, key=lambda item: (abs(item[0] - 46), item[1]))
+        candidate = ordered[rank % len(ordered)]
+    return _schedule_from_candidate(candidate, required_steps, machine_id)
+
+
+def create_fleet_schedule(
+    machine_rows: list[dict],
+    scenario: str,
+    policy: str = "staggered",
+) -> dict[str, DailySchedule]:
+    """Assign deterministic schedules to a fleet by stable machine ID.
+
+    ``staggered`` selects different centered candidate windows for machines
+    with equal productive-hour requirements where enough valid windows exist.
+    It is a modelling assumption for comparing fleet timing effects, not a
+    claim about actual construction-site behavior. ``centered`` and
+    ``reference`` remain available as comparison policies.
+    """
+    if policy not in {"reference", "centered", "staggered"}:
+        raise ValueError(f"Unknown scheduling policy: {policy}")
+
+    identified_rows = [(_machine_id(row, index), row) for index, row in enumerate(machine_rows)]
+    if len({machine_id for machine_id, _ in identified_rows}) != len(identified_rows):
+        raise ValueError("Machine identifiers must be unique within a fleet")
+    schedules = {}
+    if policy != "staggered":
+        for machine_id, row in identified_rows:
+            schedules[machine_id] = create_daily_schedule(
+                row["annual_hours"], scenario, row.get("machine_class", "A"), policy, machine_id
+            )
+        return schedules
+
+    groups = {}
+    for machine_id, row in identified_rows:
+        required_steps = _required_productive_steps(row["annual_hours"], scenario, row.get("machine_class", "A"))
+        groups.setdefault(required_steps, []).append((machine_id, row))
+    for rows in groups.values():
+        candidates = sorted(_schedule_candidates(_required_productive_steps(
+            rows[0][1]["annual_hours"], scenario, rows[0][1].get("machine_class", "A")
+        )), key=lambda item: (abs(item[0] - 46), item[1]))
+        used_starts = set()
+        for machine_id, row in sorted(rows, key=lambda item: item[0]):
+            candidate = next((item for item in candidates if item[1] not in used_starts), candidates[0])
+            used_starts.add(candidate[1])
+            required_steps = _required_productive_steps(row["annual_hours"], scenario, row.get("machine_class", "A"))
+            schedules[machine_id] = _schedule_from_candidate(candidate, required_steps, machine_id)
+    return schedules
+
+
+def _required_productive_steps(annual_hours: float, scenario: str, machine_class: str) -> int:
     reference_hours = {
         "A": {"high": 8.0, "low": 6.0},
         "B": {"high": 4.0, "low": 4.0},
         "C": {"high": 2.0, "low": 2.0},
     }
     daily_hours = reference_hours.get(machine_class, reference_hours["A"]).get(scenario, 0.0)
-    required_steps = round(daily_hours * STEPS_PER_HOUR)
-    if policy != "centered":
-        raise ValueError(f"Unknown scheduling policy: {policy}")
-    if required_steps == 0:
-        empty = [False] * 96
-        return DailySchedule(empty, empty.copy(), DAY_START_STEP, DAY_START_STEP, 0)
+    return round(daily_hours * STEPS_PER_HOUR)
 
+
+def _schedule_candidates(required_steps: int) -> list[tuple[float, int, int, list[int]]]:
     candidates = []
     for start_step in range(DAY_START_STEP, DAY_END_STEP):
         if _is_break_step(start_step):
             continue
         for end_step in range(start_step + 1, DAY_END_STEP + 1):
-            productive_steps = [
-                step for step in range(start_step, end_step)
-                if not _is_break_step(step)
-            ]
+            productive_steps = [step for step in range(start_step, end_step) if not _is_break_step(step)]
             if len(productive_steps) == required_steps:
-                midpoint = (start_step + end_step) / 2
-                candidates.append((abs(midpoint - 46), start_step, end_step, productive_steps))
+                candidates.append(((start_step + end_step) / 2, start_step, end_step, productive_steps))
                 break
             if len(productive_steps) > required_steps:
                 break
-    if not candidates:
-        raise ValueError(f"{daily_hours} productive hours do not fit in the operating window")
+    return candidates
 
-    _, start_step, end_step, productive_steps = min(candidates, key=lambda item: (item[0], item[1]))
+
+def _schedule_from_candidate(candidate, required_steps: int, machine_id: str | None) -> DailySchedule:
+    _, start_step, end_step, productive_steps = candidate
     productive = [False] * 96
     for step in productive_steps:
         productive[step] = True
     shift_window = [False] * 96
     for step in range(start_step, end_step):
         shift_window[step] = True
-    return DailySchedule(productive, shift_window, start_step, end_step, required_steps)
+    return DailySchedule(productive, shift_window, start_step, end_step, required_steps, machine_id)
+
+
+def _machine_id(row: dict, index: int) -> str:
+    return str(row.get("machine_id") or f"{row.get('name', 'machine')}-{index + 1}")
+
+
+def _stable_identifier_rank(machine_id: str) -> int:
+    return sum((index + 1) * ord(character) for index, character in enumerate(machine_id))
 
 
 def _is_break_step(step: int) -> bool:

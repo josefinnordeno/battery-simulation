@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from data_loader import background_load, create_daily_schedule, load_machine_rows, time_labels
+from data_loader import background_load, create_fleet_schedule, load_machine_rows, time_labels
 from models import Battery, Machine
 
 
@@ -38,15 +38,19 @@ def run_simulation(
     seed: int = 42,
     charging_positions: int | None = None,
     break_idle_power_kw: float = 15.0,
+    schedule_policy: str = "centered",
 ) -> SimulationResult:
     charging_efficiency = 0.92
     rng = np.random.default_rng(seed)
     rows = load_machine_rows()
+    fleet_schedules = create_fleet_schedule(rows, scenario, schedule_policy)
     machines = []
     schedule_table = []
     for index, row in enumerate(rows):
-        daily_schedule = create_daily_schedule(row["annual_hours"], scenario, row.get("machine_class", "A"))
+        machine_id = str(row.get("machine_id") or f"{row.get('name', 'machine')}-{index + 1}")
+        daily_schedule = fleet_schedules[machine_id]
         schedule_table.append({
+            "machine_id": machine_id,
             "machine": row["name"],
             "class": row.get("machine_class", "A"),
             "start": daily_schedule.start_label,

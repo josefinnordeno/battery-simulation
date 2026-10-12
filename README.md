@@ -22,7 +22,7 @@ The simulation covers 24 hours in 96 consistent 15-minute steps and models:
 - a finite reserve and charging pool, with 22 kW per occupied charger;
 - deterministic baseline behavior controlled by the `seed` argument.
 
-## Scheduling policy
+## Scheduling policies
 
 The reference productive-hour definitions are unchanged: Class A requires 8 hours
 in the high scenario and 6 hours in the low scenario; Class B requires 4 hours;
@@ -31,10 +31,23 @@ shift's elapsed window may span a break, but the break does not count toward its
 productive-hour total. Every boundary is aligned to the 15-minute simulation
 grid and every shift ends by 16:00.
 
-The default `centered` policy chooses the valid shift window whose midpoint is
-closest to 11:30. This deterministic policy gives shorter shifts individual
-start and end times without introducing probabilistic assumptions. Alternative
-policies can be added through `create_daily_schedule(..., policy=...)`.
+The legacy `create_schedule()` function retains the original reference mask: a
+single fixed block beginning at 08:00. It is available through the
+`reference` policy and is intentionally separate from the explicit operating
+window schedules, so comparisons do not silently change the reference model.
+
+The `centered` policy chooses the valid shift window whose midpoint is closest
+to 11:30. Machines with the same class and scenario therefore receive the same
+window. The simulator uses this policy by default for compatibility.
+
+The `staggered` policy is implemented by `create_fleet_schedule()`. It sorts
+machines by their stable `machine_id` and assigns distinct valid start times to
+shorter shifts when enough candidate windows exist. This is a deterministic
+modelling assumption for comparing fleet timing effects; it is not a claim
+about actual construction-site behavior. Select it explicitly with
+`run_simulation(schedule_policy="staggered")`. Use
+`create_fleet_schedule(rows, scenario, policy="centered")` or
+`policy="reference"` for direct comparisons.
 
 Because the input data does not provide auxiliary break-load measurements,
 `run_simulation` defaults to 15 kW per machine during the elapsed shift window's
@@ -42,7 +55,7 @@ break slots. Set `break_idle_power_kw=0` to explicitly model zero break demand,
 or provide another value for comparison. Break idle demand never counts as
 productive work and does not reduce the remaining productive-step count.
 
-`SimulationResult.schedule_table` contains each machine's start, end, and
+`SimulationResult.schedule_table` contains each machine's ID, start, end, and
 productive hours, and the GUI includes a productive schedule plot.
 
 ## Build an executable

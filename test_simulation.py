@@ -1,6 +1,6 @@
 import unittest
 
-from data_loader import BREAKS, create_daily_schedule, create_schedule
+from data_loader import BREAKS, create_daily_schedule, create_fleet_schedule, create_reference_schedule, create_schedule
 from simulation import run_simulation
 
 
@@ -12,6 +12,57 @@ class SimulationReferenceTests(unittest.TestCase):
         self.assertEqual(sum(create_schedule(100, "low", machine_class="B")), 16)
         self.assertEqual(sum(create_schedule(100, "high", machine_class="C")), 8)
         self.assertEqual(sum(create_schedule(100, "low", machine_class="C")), 8)
+
+    def test_fleet_schedule_preserves_all_class_scenario_hours(self):
+        expected = {
+            ("A", "high"): 8,
+            ("A", "low"): 6,
+            ("B", "high"): 4,
+            ("B", "low"): 4,
+            ("C", "high"): 2,
+            ("C", "low"): 2,
+        }
+        for (machine_class, scenario), hours in expected.items():
+            rows = [{"machine_id": "test-1", "name": "test", "annual_hours": 100, "machine_class": machine_class}]
+            schedule = create_fleet_schedule(rows, scenario, "staggered")["test-1"]
+            self.assertEqual(sum(schedule.productive), hours * 4)
+            self.assertLessEqual(schedule.end_step, 64)
+            self.assertGreaterEqual(schedule.start_step, 28)
+            self.assertFalse(any(schedule.productive[BREAKS[0][0]:BREAKS[0][1]]))
+            self.assertFalse(any(schedule.productive[BREAKS[1][0]:BREAKS[1][1]]))
+            self.assertFalse(any(schedule.productive[:28]))
+            self.assertFalse(any(schedule.productive[64:]))
+
+    def test_staggered_fleet_assigns_distinct_short_shift_starts(self):
+        rows = [
+            {"machine_id": "b-01", "name": "B1", "annual_hours": 100, "machine_class": "B"},
+            {"machine_id": "b-02", "name": "B2", "annual_hours": 100, "machine_class": "B"},
+            {"machine_id": "b-03", "name": "B3", "annual_hours": 100, "machine_class": "B"},
+        ]
+        schedules = create_fleet_schedule(rows, "high", "staggered")
+
+        self.assertEqual(len({schedule.start_step for schedule in schedules.values()}), 3)
+
+    def test_fleet_schedule_is_deterministic_and_centered_remains_available(self):
+        rows = [
+            {"machine_id": "c-02", "name": "C2", "annual_hours": 100, "machine_class": "C"},
+            {"machine_id": "c-01", "name": "C1", "annual_hours": 100, "machine_class": "C"},
+        ]
+        first = create_fleet_schedule(rows, "low", "staggered")
+        repeat = create_fleet_schedule(rows, "low", "staggered")
+        centered = create_fleet_schedule(rows, "low", "centered")
+
+        self.assertEqual(first, repeat)
+        self.assertEqual(len({schedule.start_step for schedule in centered.values()}), 1)
+
+    def test_create_schedule_preserves_original_reference_block(self):
+        reference = create_reference_schedule(100, "high", "A")
+        compatibility = create_schedule(100, "high", machine_class="A")
+
+        self.assertEqual(reference, compatibility)
+        self.assertTrue(all(reference[32:64]))
+        self.assertFalse(any(reference[:32]))
+        self.assertTrue(any(reference[36:38]))
 
     def test_daily_schedules_fit_the_operating_window_and_breaks(self):
         cases = [("A", "high", 8), ("A", "low", 6), ("B", "high", 4), ("C", "high", 2)]
