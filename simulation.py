@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from data_loader import background_load, create_schedule, load_machine_rows, time_labels
+from data_loader import background_load, create_daily_schedule, load_machine_rows, time_labels
 from models import Battery, Machine
 
 
@@ -26,6 +26,7 @@ class SimulationResult:
     peak_total_site_load_kw: float
     minimum_available_charged_reserve: int
     charging_efficiency: float
+    schedule_table: list[dict]
 
 
 def run_simulation(
@@ -36,21 +37,33 @@ def run_simulation(
     reserve_count: int = 25,
     seed: int = 42,
     charging_positions: int | None = None,
+    break_idle_power_kw: float = 15.0,
 ) -> SimulationResult:
     charging_efficiency = 0.92
     rng = np.random.default_rng(seed)
     rows = load_machine_rows()
-    machines = [
-        Machine(
-            row["name"],
-            row["type"],
-            row["annual_hours"],
-            row["average_power_kw"],
-            Battery(index, capacity_kwh, 0.8, "in_use"),
-            create_schedule(row["annual_hours"], scenario, rng, row.get("machine_class", "A")),
+    machines = []
+    schedule_table = []
+    for index, row in enumerate(rows):
+        daily_schedule = create_daily_schedule(row["annual_hours"], scenario, row.get("machine_class", "A"))
+        schedule_table.append({
+            "machine": row["name"],
+            "class": row.get("machine_class", "A"),
+            "start": daily_schedule.start_label,
+            "end": daily_schedule.end_label,
+            "productive_hours": daily_schedule.required_productive_steps / 4.0,
+        })
+        machines.append(
+            Machine(
+                row["name"],
+                row["type"],
+                row["annual_hours"],
+                row["average_power_kw"],
+                Battery(index, capacity_kwh, 0.8, "in_use"),
+                daily_schedule.productive,
+                daily_schedule.shift_window,
+            )
         )
-        for index, row in enumerate(rows)
-    ]
     for machine in machines:
         machine.remaining_work_steps = sum(machine.schedule)
     reserve = [Battery(1000 + i, capacity_kwh, 0.8, "reserve") for i in range(reserve_count)]
@@ -74,8 +87,10 @@ def run_simulation(
         for machine_index, machine in enumerate(machines):
             if machine.swap_remaining_minutes > 0:
                 machine.swap_remaining_minutes = max(0.0, machine.swap_remaining_minutes - 60.0 * hours_per_step)
-            elif step >= 32:
+            elif machine.schedule[step]:
                 active_kw += machine.consume_for_step(hours_per_step, rng)
+            elif machine.shift_window[step] and break_idle_power_kw > 0:
+                active_kw += machine.consume_idle_for_step(hours_per_step, break_idle_power_kw)
             should_swap = machine.swap_remaining_minutes <= 0 and machine.battery.soc <= 0.10
             if should_swap and reserve:
                 returned = machine.attach(reserve.pop(0), swap_time_minutes)
@@ -105,7 +120,10 @@ def run_simulation(
         charging_energy_history.append(stored_energy_this_step)
         grid_energy_history.append(stored_energy_this_step / charging_efficiency)
         total_kw_history.append(background[step] + charging_kw_history[-1])
-        active_counts.append(sum(machine.remaining_work_steps > 0 and machine.swap_remaining_minutes <= 0 for machine in machines))
+        active_counts.append(sum(
+            machine.schedule[step] and machine.swap_remaining_minutes <= 0
+            for machine in machines
+        ))
 
     return SimulationResult(
         labels, machines, soc_history, background.tolist(), charging_kw_history, total_kw_history,
@@ -113,4 +131,5 @@ def run_simulation(
         max_charging * charging_power_kw,
         max(total_kw_history, default=0.0),
         minimum_reserve, charging_efficiency,
+        schedule_table,
     )

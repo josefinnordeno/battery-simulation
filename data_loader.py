@@ -1,9 +1,35 @@
 from __future__ import annotations
 
 from pathlib import Path
+from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
+
+
+STEPS_PER_HOUR = 4
+DAY_START_STEP = 7 * STEPS_PER_HOUR
+DAY_END_STEP = 16 * STEPS_PER_HOUR
+BREAKS = ((9 * STEPS_PER_HOUR, 9 * STEPS_PER_HOUR + 2), (12 * STEPS_PER_HOUR, 12 * STEPS_PER_HOUR + 2))
+
+
+@dataclass(frozen=True)
+class DailySchedule:
+    """A 15-minute schedule separating productive time from elapsed shift time."""
+
+    productive: list[bool]
+    shift_window: list[bool]
+    start_step: int
+    end_step: int
+    required_productive_steps: int
+
+    @property
+    def start_label(self) -> str:
+        return _step_label(self.start_step)
+
+    @property
+    def end_label(self) -> str:
+        return _step_label(self.end_step)
 
 
 DEFAULT_MACHINES = [
@@ -107,18 +133,71 @@ def create_schedule(
     rng: np.random.Generator | None = None,
     machine_class: str = "A",
 ) -> list[bool]:
-    """Create the fixed reference workday for machine classes A, B and C."""
+    """Return the productive mask for the reference workday."""
+    return create_daily_schedule(annual_hours, scenario, machine_class).productive
+
+
+def create_daily_schedule(
+    annual_hours: float,
+    scenario: str,
+    machine_class: str = "A",
+    policy: str = "centered",
+) -> DailySchedule:
+    """Create a deterministic shift within 07:00-16:00.
+
+    The default ``centered`` policy chooses the valid 15-minute shift window
+    whose midpoint is closest to 11:30. Breaks remain elapsed shift time but
+    are excluded from productive slots. This avoids starting every short
+    shift at 07:00 while remaining reproducible and configurable by policy.
+    """
     reference_hours = {
         "A": {"high": 8.0, "low": 6.0},
         "B": {"high": 4.0, "low": 4.0},
         "C": {"high": 2.0, "low": 2.0},
     }
     daily_hours = reference_hours.get(machine_class, reference_hours["A"]).get(scenario, 0.0)
-    active_steps = round(daily_hours / 0.25)
-    schedule = np.zeros(96, dtype=bool)
-    start = 32
-    schedule[start : start + active_steps] = True
-    return schedule.tolist()
+    required_steps = round(daily_hours * STEPS_PER_HOUR)
+    if policy != "centered":
+        raise ValueError(f"Unknown scheduling policy: {policy}")
+    if required_steps == 0:
+        empty = [False] * 96
+        return DailySchedule(empty, empty.copy(), DAY_START_STEP, DAY_START_STEP, 0)
+
+    candidates = []
+    for start_step in range(DAY_START_STEP, DAY_END_STEP):
+        if _is_break_step(start_step):
+            continue
+        for end_step in range(start_step + 1, DAY_END_STEP + 1):
+            productive_steps = [
+                step for step in range(start_step, end_step)
+                if not _is_break_step(step)
+            ]
+            if len(productive_steps) == required_steps:
+                midpoint = (start_step + end_step) / 2
+                candidates.append((abs(midpoint - 46), start_step, end_step, productive_steps))
+                break
+            if len(productive_steps) > required_steps:
+                break
+    if not candidates:
+        raise ValueError(f"{daily_hours} productive hours do not fit in the operating window")
+
+    _, start_step, end_step, productive_steps = min(candidates, key=lambda item: (item[0], item[1]))
+    productive = [False] * 96
+    for step in productive_steps:
+        productive[step] = True
+    shift_window = [False] * 96
+    for step in range(start_step, end_step):
+        shift_window[step] = True
+    return DailySchedule(productive, shift_window, start_step, end_step, required_steps)
+
+
+def _is_break_step(step: int) -> bool:
+    return any(start <= step < end for start, end in BREAKS)
+
+
+def _step_label(step: int) -> str:
+    hour, quarter = divmod(step, STEPS_PER_HOUR)
+    return f"{hour:02d}:{quarter * 15:02d}"
 
 
 def background_load(scenario: str) -> np.ndarray:

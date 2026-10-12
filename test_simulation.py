@@ -1,6 +1,6 @@
 import unittest
 
-from data_loader import create_schedule
+from data_loader import BREAKS, create_daily_schedule, create_schedule
 from simulation import run_simulation
 
 
@@ -12,6 +12,33 @@ class SimulationReferenceTests(unittest.TestCase):
         self.assertEqual(sum(create_schedule(100, "low", machine_class="B")), 16)
         self.assertEqual(sum(create_schedule(100, "high", machine_class="C")), 8)
         self.assertEqual(sum(create_schedule(100, "low", machine_class="C")), 8)
+
+    def test_daily_schedules_fit_the_operating_window_and_breaks(self):
+        cases = [("A", "high", 8), ("A", "low", 6), ("B", "high", 4), ("C", "high", 2)]
+
+        for machine_class, scenario, expected_hours in cases:
+            with self.subTest(machine_class=machine_class, scenario=scenario):
+                schedule = create_daily_schedule(100, scenario, machine_class)
+                self.assertEqual(sum(schedule.productive), expected_hours * 4)
+                self.assertLessEqual(schedule.end_step, 64)
+                self.assertGreaterEqual(schedule.start_step, 28)
+                self.assertTrue(any(schedule.shift_window))
+                for break_start, break_end in BREAKS:
+                    self.assertFalse(any(schedule.productive[break_start:break_end]))
+
+    def test_daily_schedule_is_reproducible_and_short_shifts_are_staggered(self):
+        first = create_daily_schedule(100, "high", "B")
+        repeat = create_daily_schedule(100, "high", "B")
+
+        self.assertEqual(first, repeat)
+        self.assertNotEqual(first.start_label, "07:00")
+        self.assertNotEqual(first.start_step, repeat.end_step)
+
+    def test_simulation_exposes_machine_schedule_table(self):
+        result = run_simulation()
+
+        self.assertEqual(len(result.schedule_table), len(result.machines))
+        self.assertTrue(all(row["end"] <= "16:00" for row in result.schedule_table))
 
     def test_baseline_is_deterministic_and_respects_reference_limits(self):
         result = run_simulation()

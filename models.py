@@ -39,17 +39,24 @@ class Machine:
     average_power_kw: float
     battery: Battery
     schedule: list[bool] = field(default_factory=list)
+    shift_window: list[bool] = field(default_factory=list)
     swap_count: int = 0
     swap_remaining_minutes: float = 0.0
     remaining_work_steps: int = 0
 
-    def consume_for_step(self, hours: float, rng) -> float:
+    def consume_for_step(self, hours: float, rng, power_kw: float | None = None) -> float:
         if self.remaining_work_steps <= 0:
             return 0.0
-        demand = self.average_power_kw
+        demand = self.average_power_kw if power_kw is None else power_kw
         self.battery.consume(demand * hours)
         self.remaining_work_steps -= 1
         return demand
+
+    def consume_idle_for_step(self, hours: float, power_kw: float) -> float:
+        if power_kw <= 0:
+            return 0.0
+        self.battery.consume(power_kw * hours)
+        return power_kw
 
     def attach(self, battery: Battery, swap_time_minutes: float = 25.0) -> Battery:
         old_battery = self.battery
