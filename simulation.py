@@ -34,6 +34,10 @@ def run_simulation(
     charging_power_kw: float = 22.0,
     swap_time_minutes: int = 25,
     scenario: str = "high",
+    vehicle_names: list[str] | None = None,
+    min_soc_percent: float = 10.0,
+    max_soc_percent: float = 80.0,
+    charging_efficiency_percent: float = 92.0,
     reserve_count: int = 25,
     seed: int = 42,
     charging_positions: int | None = None,
@@ -41,9 +45,18 @@ def run_simulation(
     schedule_policy: str = "centered",
     season: str | None = None,
 ) -> SimulationResult:
-    charging_efficiency = 0.92
+    if not 0 <= min_soc_percent < max_soc_percent <= 100:
+        raise ValueError("Min SOC måste vara lägre än Max SOC och ligga mellan 0 och 100 %.")
+    if not 0 < charging_efficiency_percent <= 100:
+        raise ValueError("Laddningsverkningsgrad måste ligga mellan 0 och 100 %.")
+    charging_efficiency = charging_efficiency_percent / 100.0
     rng = np.random.default_rng(seed)
     rows = load_machine_rows()
+    if vehicle_names is not None:
+        selected_names = set(vehicle_names)
+        rows = [row for row in rows if row["name"] in selected_names]
+    if not rows:
+        raise ValueError("Välj minst ett fordon.")
     fleet_schedules = create_fleet_schedule(rows, scenario, schedule_policy)
     machines = []
     schedule_table = []
@@ -64,7 +77,7 @@ def run_simulation(
                 row["type"],
                 row["annual_hours"],
                 row["average_power_kw"],
-                Battery(index, capacity_kwh, 0.8, "in_use"),
+                Battery(index, capacity_kwh, max_soc_percent / 100.0, "in_use"),
                 daily_schedule.productive,
                 daily_schedule.shift_window,
                 machine_id=machine_id,
@@ -72,7 +85,7 @@ def run_simulation(
         )
     for machine in machines:
         machine.remaining_work_steps = sum(machine.schedule)
-    reserve = [Battery(1000 + i, capacity_kwh, 0.8, "reserve") for i in range(reserve_count)]
+    reserve = [Battery(1000 + i, capacity_kwh, max_soc_percent / 100.0, "reserve") for i in range(reserve_count)]
     charging = []
     if charging_positions is None:
         charging_positions = len(machines) + reserve_count
@@ -97,7 +110,7 @@ def run_simulation(
                 active_kw += machine.consume_for_step(hours_per_step, rng)
             elif machine.shift_window[step] and break_idle_power_kw > 0:
                 active_kw += machine.consume_idle_for_step(hours_per_step, break_idle_power_kw)
-            should_swap = machine.swap_remaining_minutes <= 0 and machine.battery.soc <= 0.10
+            should_swap = machine.swap_remaining_minutes <= 0 and machine.battery.soc <= min_soc_percent / 100.0
             if should_swap and reserve:
                 returned = machine.attach(reserve.pop(0), swap_time_minutes)
                 charging.append(returned)
@@ -112,7 +125,7 @@ def run_simulation(
         max_charging = max(max_charging, active_charging)
         for battery in charging[:charging_positions]:
             power = charging_power_kw
-            stored_energy = battery.charge(power, hours_per_step, charging_efficiency)
+            stored_energy = battery.charge(power, hours_per_step, charging_efficiency, max_soc_percent / 100.0)
             stored_energy_this_step += stored_energy
             charged_this_step += stored_energy / charging_efficiency / hours_per_step
             if battery.soc >= 0.8:
