@@ -22,6 +22,20 @@ The simulation covers 24 hours in 96 consistent 15-minute steps and models:
 - a finite reserve and charging pool, with 22 kW per occupied charger;
 - deterministic baseline behavior controlled by the `seed` argument.
 
+## Seasonal baseload
+
+The baseload uses a simple hourly profile expanded to the simulation's
+15-minute steps. Winter varies from approximately 150 kWh/h at night to a
+250 kWh/h daytime peak. Summer varies from approximately 40 kWh/h at night to
+a 100 kWh/h daytime peak. These values represent average power over each hour
+when exposed to the simulator as `background_kw`.
+
+Pass the season explicitly with `run_simulation(season="winter")` or
+`run_simulation(season="summer")`. For backwards compatibility, omitting the
+season maps the existing `high` scenario to winter and `low` to summer. The
+season and load scenario are separate inputs, so combinations such as
+`run_simulation(scenario="high", season="summer")` are also supported.
+
 When `Beräkningar - Modell.csv` is used, each selected vehicle's `Låg
 belastning` and `Hög belastning` values are stored on its input row and used for
 that vehicle's schedule. Values are rounded to the nearest 15-minute grid step.

@@ -39,6 +39,7 @@ def run_simulation(
     charging_positions: int | None = None,
     break_idle_power_kw: float = 15.0,
     schedule_policy: str = "centered",
+    season: str | None = None,
 ) -> SimulationResult:
     charging_efficiency = 0.92
     rng = np.random.default_rng(seed)
@@ -77,7 +78,7 @@ def run_simulation(
         charging_positions = len(machines) + reserve_count
     labels = time_labels()
     soc_history = {index: [] for index, _ in enumerate(machines)}
-    background = background_load(scenario)
+    background = background_load(scenario, season)
     charging_kw_history, total_kw_history, active_counts = [], [], []
     charging_energy_history = []
     grid_energy_history = []

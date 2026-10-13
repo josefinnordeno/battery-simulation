@@ -1,6 +1,6 @@
 import unittest
 
-from data_loader import BREAKS, create_daily_schedule, create_fleet_schedule, create_reference_schedule, create_schedule, load_machine_rows
+from data_loader import BREAKS, background_load, create_daily_schedule, create_fleet_schedule, create_reference_schedule, create_schedule, load_machine_rows
 from simulation import run_simulation
 
 
@@ -104,6 +104,23 @@ class SimulationReferenceTests(unittest.TestCase):
         for row in rows:
             expected_steps = round(row["low_load_hours"] * 4)
             self.assertEqual(sum(schedules[row["machine_id"]].productive), expected_steps)
+
+    def test_seasonal_baseload_profiles_vary_over_the_day(self):
+        winter = background_load("high", "winter")
+        summer = background_load("low", "summer")
+
+        self.assertEqual(len(winter), 96)
+        self.assertEqual(len(summer), 96)
+        self.assertEqual(min(winter), 150.0)
+        self.assertEqual(max(winter), 250.0)
+        self.assertEqual(min(summer), 40.0)
+        self.assertEqual(max(summer), 100.0)
+        self.assertEqual(winter[0], winter[3])
+        self.assertEqual(winter[9 * 4], 250.0)
+        self.assertEqual(summer[0], 40.0)
+        self.assertEqual(summer[10 * 4], 100.0)
+        self.assertEqual(background_load("high").tolist(), winter.tolist())
+        self.assertEqual(background_load("low").tolist(), summer.tolist())
 
     def test_baseline_is_deterministic_and_respects_reference_limits(self):
         result = run_simulation()

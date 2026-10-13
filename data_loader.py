@@ -11,6 +11,10 @@ STEPS_PER_HOUR = 4
 DAY_START_STEP = 7 * STEPS_PER_HOUR
 DAY_END_STEP = 16 * STEPS_PER_HOUR
 BREAKS = ((9 * STEPS_PER_HOUR, 9 * STEPS_PER_HOUR + 2), (12 * STEPS_PER_HOUR, 12 * STEPS_PER_HOUR + 2))
+HOURLY_BASE_LOAD_KWH = {
+    "winter": (150, 150, 150, 150, 150, 160, 180, 210, 235, 250, 250, 245, 240, 235, 230, 220, 210, 200, 190, 180, 170, 160, 155, 150),
+    "summer": (40, 40, 40, 40, 40, 45, 55, 70, 85, 95, 100, 98, 95, 90, 85, 80, 75, 68, 60, 55, 50, 45, 42, 40),
+}
 
 
 @dataclass(frozen=True)
@@ -312,14 +316,21 @@ def _step_label(step: int) -> str:
     return f"{hour:02d}:{quarter * 15:02d}"
 
 
-def background_load(scenario: str) -> np.ndarray:
-    time = np.arange(96) / 4.0
-    if scenario == "high":
-        return np.full(96, 250.0)
-    base, peak, center = 48.0, 48.0, 13.0
-    morning = 10.0 * np.exp(-0.5 * ((time - 8.0) / 2.0) ** 2)
-    afternoon = peak * np.exp(-0.5 * ((time - center) / 4.5) ** 2)
-    return base + morning + afternoon
+def background_load(scenario: str = "high", season: str | None = None) -> np.ndarray:
+    """Return the seasonal baseload as 96 quarter-hour average kW values.
+
+    The profile is defined as hourly energy-rate reference values in kWh/h and
+    repeated over the four 15-minute simulation steps in each hour. If season
+    is omitted, high maps to winter and low maps to summer for compatibility.
+    """
+    selected_season = season or ("winter" if scenario == "high" else "summer")
+    selected_season = {"vinter": "winter", "sommar": "summer"}.get(selected_season.lower(), selected_season.lower())
+    try:
+        hourly_profile = HOURLY_BASE_LOAD_KWH[selected_season]
+    except KeyError as error:
+        valid = ", ".join(sorted(HOURLY_BASE_LOAD_KWH))
+        raise ValueError(f"Unknown season: {selected_season}. Choose one of: {valid}") from error
+    return np.repeat(np.asarray(hourly_profile, dtype=float), STEPS_PER_HOUR)
 
 
 def time_labels() -> list[str]:
