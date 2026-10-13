@@ -1,6 +1,6 @@
 import unittest
 
-from data_loader import BREAKS, create_daily_schedule, create_fleet_schedule, create_reference_schedule, create_schedule
+from data_loader import BREAKS, create_daily_schedule, create_fleet_schedule, create_reference_schedule, create_schedule, load_machine_rows
 from simulation import run_simulation
 
 
@@ -90,6 +90,20 @@ class SimulationReferenceTests(unittest.TestCase):
 
         self.assertEqual(len(result.schedule_table), len(result.machines))
         self.assertTrue(all(row["end"] <= "16:00" for row in result.schedule_table))
+        self.assertEqual(
+            {machine.machine_id for machine in result.machines},
+            {row["machine_id"] for row in result.schedule_table},
+        )
+
+    def test_low_load_uses_vehicle_values_from_model_csv(self):
+        rows = load_machine_rows("Beräkningar - Modell.csv")
+        schedules = create_fleet_schedule(rows, "low", "centered")
+
+        self.assertEqual(rows[0]["low_load_hours"], 6.0)
+        self.assertEqual(rows[1]["low_load_hours"], 5.0)
+        for row in rows:
+            expected_steps = round(row["low_load_hours"] * 4)
+            self.assertEqual(sum(schedules[row["machine_id"]].productive), expected_steps)
 
     def test_baseline_is_deterministic_and_respects_reference_limits(self):
         result = run_simulation()

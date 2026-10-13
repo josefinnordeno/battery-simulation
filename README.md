@@ -22,6 +22,12 @@ The simulation covers 24 hours in 96 consistent 15-minute steps and models:
 - a finite reserve and charging pool, with 22 kW per occupied charger;
 - deterministic baseline behavior controlled by the `seed` argument.
 
+When `Beräkningar - Modell.csv` is used, each selected vehicle's `Låg
+belastning` and `Hög belastning` values are stored on its input row and used for
+that vehicle's schedule. Values are rounded to the nearest 15-minute grid step.
+Vehicles also retain a unique `machine_id` in the loaded row and `Machine`
+model, which can be used for later fleet filtering.
+
 ## Scheduling policies
 
 The reference productive-hour definitions are unchanged: Class A requires 8 hours

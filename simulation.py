@@ -66,6 +66,7 @@ def run_simulation(
                 Battery(index, capacity_kwh, 0.8, "in_use"),
                 daily_schedule.productive,
                 daily_schedule.shift_window,
+                machine_id=machine_id,
             )
         )
     for machine in machines:

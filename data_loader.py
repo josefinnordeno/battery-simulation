@@ -113,6 +113,8 @@ def _load_model_rows(frame: pd.DataFrame) -> list[dict]:
                 "type": str(row["Typ"]).strip(),
                 "machine_class": str(row.get("klass", "A")).strip().upper(),
                 "annual_hours": annual_hours,
+                "low_load_hours": _number(row.get("Låg belastning")),
+                "high_load_hours": _number(row.get("Hög belastning")),
                 "average_power_kw": consumption,
                 "battery_capacity_kwh": battery_capacity,
             }
@@ -164,6 +166,7 @@ def create_daily_schedule(
     machine_class: str = "A",
     policy: str = "centered",
     machine_id: str | None = None,
+    daily_hours: float | None = None,
 ) -> DailySchedule:
     """Create a deterministic shift within 07:00-16:00.
 
@@ -172,7 +175,7 @@ def create_daily_schedule(
     are excluded from productive slots. This avoids starting every short
     shift at 07:00 while remaining reproducible and configurable by policy.
     """
-    required_steps = _required_productive_steps(annual_hours, scenario, machine_class)
+    required_steps = _required_productive_steps(annual_hours, scenario, machine_class, daily_hours)
     if policy == "reference":
         reference = create_reference_schedule(annual_hours, scenario, machine_class)
         end_step = 32 + required_steps
@@ -218,36 +221,52 @@ def create_fleet_schedule(
     schedules = {}
     if policy != "staggered":
         for machine_id, row in identified_rows:
+            daily_hours = None if policy == "reference" else _row_daily_hours(row, scenario)
             schedules[machine_id] = create_daily_schedule(
-                row["annual_hours"], scenario, row.get("machine_class", "A"), policy, machine_id
+                row["annual_hours"], scenario, row.get("machine_class", "A"), policy, machine_id, daily_hours
             )
         return schedules
 
     groups = {}
     for machine_id, row in identified_rows:
-        required_steps = _required_productive_steps(row["annual_hours"], scenario, row.get("machine_class", "A"))
+        required_steps = _row_required_productive_steps(row, scenario)
         groups.setdefault(required_steps, []).append((machine_id, row))
-    for rows in groups.values():
-        candidates = sorted(_schedule_candidates(_required_productive_steps(
-            rows[0][1]["annual_hours"], scenario, rows[0][1].get("machine_class", "A")
-        )), key=lambda item: (abs(item[0] - 46), item[1]))
-        used_starts = set()
+    used_starts = set()
+    for required_steps, rows in groups.items():
+        candidates = sorted(_schedule_candidates(required_steps), key=lambda item: (abs(item[0] - 46), item[1]))
         for machine_id, row in sorted(rows, key=lambda item: item[0]):
             candidate = next((item for item in candidates if item[1] not in used_starts), candidates[0])
             used_starts.add(candidate[1])
-            required_steps = _required_productive_steps(row["annual_hours"], scenario, row.get("machine_class", "A"))
             schedules[machine_id] = _schedule_from_candidate(candidate, required_steps, machine_id)
     return schedules
 
 
-def _required_productive_steps(annual_hours: float, scenario: str, machine_class: str) -> int:
+def _required_productive_steps(
+    annual_hours: float,
+    scenario: str,
+    machine_class: str,
+    daily_hours: float | None = None,
+) -> int:
     reference_hours = {
         "A": {"high": 8.0, "low": 6.0},
         "B": {"high": 4.0, "low": 4.0},
         "C": {"high": 2.0, "low": 2.0},
     }
-    daily_hours = reference_hours.get(machine_class, reference_hours["A"]).get(scenario, 0.0)
-    return round(daily_hours * STEPS_PER_HOUR)
+    hours = daily_hours
+    if hours is None:
+        hours = reference_hours.get(machine_class, reference_hours["A"]).get(scenario, 0.0)
+    return round(hours * STEPS_PER_HOUR)
+
+
+def _row_daily_hours(row: dict, scenario: str) -> float | None:
+    value = row.get(f"{scenario}_load_hours")
+    return value if isinstance(value, (int, float)) and value > 0 else None
+
+
+def _row_required_productive_steps(row: dict, scenario: str) -> int:
+    return _required_productive_steps(
+        row["annual_hours"], scenario, row.get("machine_class", "A"), _row_daily_hours(row, scenario)
+    )
 
 
 def _schedule_candidates(required_steps: int) -> list[tuple[float, int, int, list[int]]]:

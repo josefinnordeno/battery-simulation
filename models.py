@@ -43,6 +43,8 @@ class Machine:
     swap_count: int = 0
     swap_remaining_minutes: float = 0.0
     remaining_work_steps: int = 0
+    machine_id: str = ""
+    included: bool = True
 
     def consume_for_step(self, hours: float, rng, power_kw: float | None = None) -> float:
         if self.remaining_work_steps <= 0:
