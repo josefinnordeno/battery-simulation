@@ -25,6 +25,9 @@ class SimulationResult:
     peak_charging_load_kw: float
     peak_total_site_load_kw: float
     minimum_available_charged_reserve: int
+    total_battery_count: int
+    min_soc_percent: float
+    max_soc_percent: float
     charging_efficiency: float
     schedule_table: list[dict]
 
@@ -149,6 +152,6 @@ def run_simulation(
         swaps, active_counts, charging_energy_history, grid_energy_history, swap_downtime_minutes, max_charging,
         max_charging * charging_power_kw,
         max(total_kw_history, default=0.0),
-        minimum_reserve, charging_efficiency,
+        minimum_reserve, len(machines) + reserve_count, min_soc_percent, max_soc_percent, charging_efficiency,
         schedule_table,
     )
