@@ -33,7 +33,7 @@ Terminalkommandon från projektroten:
 
 ## Versionshistorik
 Projektet är kopplat till `https://github.com/josefinnordeno/battery-simulation.git` som `origin`. Den gemensamma huvudbranchen heter `master`.
-Arbetsbranchen för denna setup heter `codex/collaboration-setup`. Den bevarar den befintliga lokala kopian, inklusive skillnader mot GitHubs modellversion. Den ursprungliga lokala versionen finns kvar på `main`; den är inte den gemensamma huvudbranchen.
+Arbetsbranchen för denna setup heter `codex/robin`. Den bevarar den befintliga lokala kopian, inklusive skillnader mot GitHubs modellversion. Den ursprungliga lokala versionen finns kvar på `main`; den är inte den gemensamma huvudbranchen.
 Setup-commits använder den tekniska identiteten “Battery simulation setup” (setup@localhost). Ange ditt eget namn och din e-post lokalt i projektet före personliga commits.
 
 ## Samarbeta via GitHub
