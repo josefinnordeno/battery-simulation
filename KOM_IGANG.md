@@ -32,9 +32,21 @@ Terminalkommandon från projektroten:
 ```
 
 ## Versionshistorik
-En lokal Git-historik har skapats med en första version av projektet.
-Ingen personlig commit-identitet var inställd vid setup. Den första versionen använder den tekniska identiteten “Battery simulation setup” (setup@localhost), enbart för denna commit. Ange ditt eget namn och din e-post lokalt i projektet före personliga commits.
-GitHub är inte anslutet. Inget publiceras av denna setup.
+Projektet är kopplat till `https://github.com/josefinnordeno/battery-simulation.git` som `origin`. Den gemensamma huvudbranchen heter `master`.
+Arbetsbranchen för denna setup heter `codex/collaboration-setup`. Den bevarar den befintliga lokala kopian, inklusive skillnader mot GitHubs modellversion. Den ursprungliga lokala versionen finns kvar på `main`; den är inte den gemensamma huvudbranchen.
+Setup-commits använder den tekniska identiteten “Battery simulation setup” (setup@localhost). Ange ditt eget namn och din e-post lokalt i projektet före personliga commits.
+
+## Samarbeta via GitHub
+Arbeta i en egen branch och granska ändringar före varje commit. Efter att arbetsbranchen publicerats används:
+```
+git fetch origin
+git status
+git add <filer-du-vill-spara>
+git commit -m "Beskriv ändringen"
+git push
+```
+Skapa sedan en pull request på GitHub från arbetsbranchen till `master`. Kör testerna och låt en gruppmedlem granska innan ändringarna slås ihop. Setup-branchen innehåller även tidigare lokala skillnader i `gui.py`, `simulation.py` och `visualization.py`; granska dem särskilt före sammanslagning.
+Hämta framtida uppdateringar från `origin/master` och granska hur de passar med dina ändringar innan du slår ihop dem. Varje gruppmedlem använder sin egen Pythonmiljö; `.venv` och `__pycache__` ska inte versionshanteras.
 
 ## Modellens begränsningar
 Se MODELLKONTEXT.md. Installation och passerande tester innebär inte att samtliga modellantaganden är validerade eller att bristerna är åtgärdade.
