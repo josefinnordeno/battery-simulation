@@ -1,0 +1,18 @@
+# Installerade och verifierade paket den 14 oktober 2026 (Python 3.14, macOS arm64).
+altgraph==0.17.5
+contourpy==1.4.0
+cycler==0.12.1
+fonttools==4.66.1
+kiwisolver==1.5.1
+macholib==1.16.4
+matplotlib==3.11.2
+numpy==2.5.4
+packaging==26.3
+pandas==3.0.6
+pillow==12.3.0
+pyinstaller==6.22.3
+pyinstaller-hooks-contrib==2026.8
+pyparsing==3.3.3
+python-dateutil==2.9.0.post0
+setuptools==84.0.0
+six==1.17.0
